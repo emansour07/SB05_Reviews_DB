@@ -1,0 +1,28 @@
+name: Synchronize Forma
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: forma-sync
+  cancel-in-progress: false
+jobs:
+  synchronize:
+    if: vars.FORMA_SYNC_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Refresh the shared snapshot
+        env:
+          SB05_SYNC_SECRET: ${{ secrets.SB05_SYNC_SECRET }}
+        run: |
+          if [ -z "$SB05_SYNC_SECRET" ]; then
+            echo "Configure SB05_SYNC_SECRET before enabling synchronization."
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error --max-time 240 \
+            --request POST \
+            --header "Authorization: Bearer $SB05_SYNC_SECRET" \
+            https://sb05-review-control-eslam-1109.gladlapwing.chatgpt.site/api/forma/sync
