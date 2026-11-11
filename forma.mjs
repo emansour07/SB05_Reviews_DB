@@ -82,7 +82,6 @@ export async function formaRoutes(request,env,owner,readSnapshot,validate){
  }
  if(path==='/api/forma/refresh'&&request.method==='POST'){
   if(![u.origin,'https://emansour07.github.io'].includes(request.headers.get('Origin')))return fj({error:'Refresh is unavailable from this page.'},403);
-  if(request.body)return fj({error:'Refresh does not accept data.'},400);
   if(!configured(env)||!env.BUCKET||!await readF(env,'tokens'))return fj({skipped:true,available:false});
   try{const result=await syncForma(env,readSnapshot,validate,true);return fj({ok:!!result.ok,skipped:!!result.skipped,updating:!!result.updating,lastSuccessAt:result.lastSuccessAt||null,retryAfterMs:result.retryAfterMs||0});}
   catch{return fj({error:'Unable to update right now. Your last saved reviews are still available.'},503);}

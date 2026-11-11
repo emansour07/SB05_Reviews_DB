@@ -19,6 +19,7 @@ assert.equal((await call('/api/forma/refresh','POST',{Origin:'https://evil.test'
 assert.equal((await call('/api/forma/refresh','GET',viewerHeaders)).status,403);
 assert.equal((await call('/api/forma/connect','POST',viewerHeaders)).status,403);
 const disconnected=await call('/api/forma/refresh','POST',viewerHeaders);assert.equal(disconnected.status,200);assert.equal((await disconnected.json()).available,false);
+const emptyBody=await worker.fetch(new Request('https://site.test/api/forma/refresh',{method:'POST',headers:viewerHeaders,body:''}),env);assert.equal(emptyBody.status,200,'An empty POST body stream must be accepted by the edge endpoint');
 assert.equal((await call('/api/forma/connect','POST',{})).status,403);
 assert.equal((await call('/api/forma/connect','POST',{...headers,Origin:'https://evil.test'})).status,403);
 assert.equal((await call('/api/forma/sync','POST',{})).status,403);
