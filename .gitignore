@@ -8,3 +8,6 @@ pages/
 .sites-runtime/
 *.log
 *.tar.gz
+.wrangler/
+*.secret
+cloudflare-secrets.json

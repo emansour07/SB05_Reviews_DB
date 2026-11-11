@@ -1,4 +1,5 @@
 import {formaRoutes} from './forma.mjs';
+export {stored,validateSnapshot};
 const KEY='sb05/shared-snapshot-v2.json';
 const json=(data,status=200,headers={})=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...headers}});
 function validateSnapshot(s){

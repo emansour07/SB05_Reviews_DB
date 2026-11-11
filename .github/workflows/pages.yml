@@ -23,6 +23,7 @@ jobs:
           node-version: '22'
       - run: node build.cjs --pages
       - run: node test-forma.mjs
+      - run: node test-forma-batches.mjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

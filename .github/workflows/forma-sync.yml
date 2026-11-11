@@ -1,7 +1,5 @@
 name: Synchronize Forma
 on:
-  schedule:
-    - cron: '*/5 * * * *'
   workflow_dispatch:
 permissions:
   contents: read
@@ -25,4 +23,4 @@ jobs:
           curl --fail-with-body --silent --show-error --max-time 240 \
             --request POST \
             --header "Authorization: Bearer $SB05_SYNC_SECRET" \
-            https://sb05-review-control-eslam-1109.gladlapwing.chatgpt.site/api/forma/sync
+            "${{ vars.SB05_API_ORIGIN }}/api/forma/sync"
