@@ -1,7 +1,7 @@
 const assert=require('node:assert/strict'),C=require('./core.js');
 assert.deepEqual([0,1,4,5,10,11,20,21].map(C.sizeBand),['No drawings','1–4','1–4','5–10','5–10','11–20','11–20','>20']);
 assert.deepEqual([null,0,1,1.01,2,2.01,3,3.01].map(C.ageBand),['Unknown age','≤1 day','≤1 day','>1–2 days','>1–2 days','>2–3 days','>2–3 days','>3 days']);
-const t=10*C.DAY,files=n=>Array.from({length:n},(_,i)=>({name:`drawing-${i}.PDF`})).concat([{name:'model.rvt'},{name:'copy.dwg'},{name:'not.pdf.tmp'}]);
+const t=10*C.DAY,files=n=>Array.from({length:n},(_,i)=>({name:`SDW-drawing-${i}.PDF`})).concat([{name:'model.rvt'},{name:'copy.dwg'},{name:'not.pdf.tmp'}]);
 const rows=[{id:'1',status:'OPEN',created:t-C.DAY,files:files(5)},{id:'2',status:'OPEN',created:t-3*C.DAY,files:files(10)},{id:'3',status:'CLOSED',created:t-8*C.DAY,finished:t-6*C.DAY,files:files(20)},{id:'4',status:'VOID',created:0,files:files(21)},{id:'5',status:'OPEN',created:null,files:files(1)},{id:'6',status:'OPEN',created:t+1,files:files(1)},{id:'7',status:'CLOSED',created:0,finished:null,files:files(0)}];
 const m=C.drawingMetrics(rows,t);assert.equal(m.total,37);assert.equal(m.open,17);assert.equal(m.closed,20);assert.equal(m.packages,5);assert.equal(m.noDrawingPackages,1);assert.equal(m.unknownAge,2);assert.deepEqual(m.cumulative,[5,5,15]);assert.equal(m.sizes['5–10'],2);
 assert.equal(C.drawingMetrics(rows,t,'closed').age['>1–2 days'],20);assert.equal(C.reviewDays(rows[2],t),2);

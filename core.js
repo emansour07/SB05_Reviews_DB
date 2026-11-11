@@ -50,28 +50,21 @@ function stats(rows,t){const open=rows.filter(isOpen),closed=rows.filter(isClose
 function compare(current,previous){if(!previous)return null;const a=new Map(previous.reviews.map(r=>[r.id,r])),b=new Map(current.reviews.map(r=>[r.id,r]));return {added:current.reviews.filter(r=>!a.has(r.id)),closed:current.reviews.filter(r=>a.has(r.id)&&isOpen(a.get(r.id))&&isClosed(r)),reopened:current.reviews.filter(r=>a.has(r.id)&&isClosed(a.get(r.id))&&isOpen(r)),removed:previous.reviews.filter(r=>!b.has(r.id)),changed:current.reviews.filter(r=>a.has(r.id)&&JSON.stringify(r)!==JSON.stringify(a.get(r.id)))};}
 const SIZE_BANDS=['1–4','5–10','11–20','>20'], AGE_BANDS=['≤1 day','>1–2 days','>2–3 days','>3 days'];
 const PDF_TYPES=['drawing','report','other','unclassified'];
-const PDF_LABELS={drawing:'Drawing PDF',report:'Report PDF',other:'Other PDF',unclassified:'Unclassified PDF',nonPdf:'Model / other file'};
+const PDF_LABELS={drawing:'Drawing',report:'Report',other:'Other document',unclassified:'Unclassified document',nonPdf:'CAD / model / other file'};
 function pdfClassification(file,packageFiles=[]){
- const name=clean(file.name);if(!/\.pdf$/i.test(name))return {type:'nonPdf',reason:'Not a PDF'};
- const declared=clean(file.documentType).toLowerCase();
- const explicit={drawing:'drawing',drawings:'drawing','shop drawing':'drawing',sdw:'drawing',report:'report',reports:'report',other:'other'}[declared];
- if(typeof explicit==='string')return {type:explicit,reason:'Document type supplied with the file'};
- const code=name.toUpperCase().match(/^[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-([A-Z0-9]+)-/)?.[1];
- // SDW is confirmed by the project owner. Unknown project codes are not guessed.
- const drawingCode=code==='SDW';
+ const name=clean(file.name);if(!/\.pdf$/i.test(name))return {type:'nonPdf',reason:'CAD, model or other file'};
+ const drawingCode=/(?:^|[^A-Z0-9])SDW(?:[^A-Z0-9]|$)/i.test(name.replace(/\.pdf$/i,''));
  const base=name.replace(/\.pdf$/i,'').toLowerCase();
  const pairedCad=packageFiles.some(f=>/\.(dwg|dxf|dgn)$/i.test(clean(f.name))&&clean(f.name).replace(/\.(dwg|dxf|dgn)$/i,'').toLowerCase()===base);
- const words=name.replace(/\.pdf$/i,'').replace(/[_-]+/g,' ');
- const reportName=/\breports?\b/i.test(words);
- const drawingName=/\b(?:shop\s+drawings?|drawings?)\b/i.test(words);
- const otherName=/\b(?:specifications?|method\s+statements?|transmittals?|cover\s+(?:letters?|sheets?))\b/i.test(words);
- if((drawingCode||drawingName||pairedCad)&&(reportName||otherName))return {type:'unclassified',reason:'Conflicting document-type clues'};
  if(drawingCode)return {type:'drawing',reason:'SDW · shop drawing'};
  if(pairedCad)return {type:'drawing',reason:'Matching CAD filename in this package'};
- if(reportName)return {type:'report',reason:'Report identified in filename'};
- if(drawingName)return {type:'drawing',reason:'Drawing identified in filename'};
- if(otherName)return {type:'other',reason:'Supporting document identified in filename'};
- return {type:'unclassified',reason:code?'Document code '+code+' is not yet mapped':'Document type not identified'};
+ const declared=clean(file.documentType).toLowerCase();
+ if(['report','reports'].includes(declared))return {type:'report',reason:'Document type supplied with the file'};
+ if(declared==='other')return {type:'other',reason:'Document type supplied with the file'};
+ const words=name.replace(/\.pdf$/i,'').replace(/[_-]+/g,' ');
+ if(/\breports?\b/i.test(words))return {type:'report',reason:'Report identified in filename'};
+ if(/\b(?:specifications?|method\s+statements?|transmittals?|cover\s+(?:letters?|sheets?))\b/i.test(words))return {type:'other',reason:'Supporting document identified in filename'};
+ return {type:'unclassified',reason:'No SDW code or matching CAD filename; document type not identified'};
 }
 const pdfType=(file,packageFiles=[])=>pdfClassification(file,packageFiles).type;
 function pdfCounts(r){const counts={drawing:0,report:0,other:0,unclassified:0,total:0};for(const f of r.files||[]){const type=pdfType(f,r.files);if(type!=='nonPdf'){counts[type]++;counts.total++;}}return counts;}
@@ -92,7 +85,7 @@ function workloadMatches(r,value,t){if(!value)return true;const [kind,arg,band]=
  if(kind==='age'||kind==='within'){if(arg==='open'?!isOpen(r):!isClosed(r))return false;const days=reviewDays(r,t);return kind==='age'?ageBand(days)===band:days!==null&&days<=Number(band);}
  return false;
 }
-function workloadLabel(value){const [kind,arg,band]=value.split('|');return kind==='document'?PDF_LABELS[arg]:kind==='all'?'PDF drawings':kind==='state'?arg+' · PDFs':kind==='size'?arg+' drawings / package':kind==='within'?'Within '+band+' days · '+(arg==='open'?'under review':'completed'):kind==='age'?band+' · '+(arg==='open'?'under review':'completed'):value;}
+function workloadLabel(value){const [kind,arg,band]=value.split('|');return kind==='document'?PDF_LABELS[arg]:kind==='all'?'Drawings':kind==='state'?arg+' · drawings':kind==='size'?arg+' drawings / package':kind==='within'?'Within '+band+' days · '+(arg==='open'?'under review':'completed'):kind==='age'?band+' · '+(arg==='open'?'under review':'completed'):value;}
 root.SB05={DAY,date,discipline,parseWorkbook,isOpen,isClosed,outcome,reviewOutcome,urgency,stats,compare,pdfCount,drawingCount,pdfCounts,pdfType,pdfClassification,PDF_TYPES,PDF_LABELS,sizeBand,reviewDays,ageBand,drawingMetrics,workloadMatches,workloadLabel,SIZE_BANDS,AGE_BANDS};
 if(typeof module!=='undefined')module.exports=root.SB05;
 })(typeof window!=='undefined'?window:globalThis);

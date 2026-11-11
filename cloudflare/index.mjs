@@ -2,7 +2,8 @@ import {DurableObject} from 'cloudflare:workers';
 import {createHandler,stored,validateSnapshot} from '../worker.mjs';
 import {syncForma} from '../forma.mjs';
 import {SQLiteStore} from './store.mjs';
-import {isOwner,validAdminKey,sessionCookie,readLoginKey,loginPage} from './auth.mjs';
+import {isOwner,sessionCookie,readLoginKey,readLoginForm,loginPage} from './auth.mjs';
+import {OwnerCodeAuth,codePage,codeSavedPage} from './owner-code.mjs';
 import dashboardHtml from '../dist/cloudflare/admin.html';
 const FRONTEND='https://emansour07.github.io/SB05_Reviews_DB/';
 const app=createHandler(dashboardHtml,{schema:1,name:'Awaiting first update',reportAt:946684800000,reviews:[],voidCount:0,warnings:[]});
@@ -18,19 +19,34 @@ function cors(request,response){
   return response;
 }
 export class SB05State extends DurableObject {
-  constructor(ctx,env){super(ctx,env);this.runtime={...env,BUCKET:new SQLiteStore(ctx.storage)};}
+  constructor(ctx,env){super(ctx,env);this.runtime={...env,BUCKET:new SQLiteStore(ctx.storage)};this.auth=new OwnerCodeAuth(ctx.storage.sql,env.SB05_ADMIN_KEY);}
   async fetch(request){
     const env=this.runtime;
     const url=new URL(request.url);
     try{
       if(url.pathname==='/')return redirect(FRONTEND);
+      const credential=this.auth.record(),signingSecret=this.auth.sessionSecret(credential);
       if(url.pathname==='/admin/login'){
         if(request.method==='GET')return security(new Response(loginPage(),{headers:{'Content-Type':'text/html; charset=utf-8'}}));
         if(request.method!=='POST'||request.headers.get('Origin')!==url.origin)return security(reply({error:'Sign-in request not accepted.'},403));
-        if(!await validAdminKey(await readLoginKey(request),env.SB05_ADMIN_KEY))return security(new Response(loginPage(true),{status:403,headers:{'Content-Type':'text/html; charset=utf-8'}}));
-        return security(new Response(null,{status:303,headers:{Location:'/admin','Set-Cookie':await sessionCookie(env.SB05_ADMIN_KEY,url.origin)}}));
+        const retry=this.auth.attempt(request);
+        if(retry)return security(new Response(loginPage('Too many attempts. Please try again in 15 minutes.'),{status:429,headers:{'Content-Type':'text/html; charset=utf-8','Retry-After':String(retry)}}));
+        if(!await this.auth.verify(await readLoginKey(request),credential))return security(new Response(loginPage(true),{status:403,headers:{'Content-Type':'text/html; charset=utf-8'}}));
+        return security(new Response(null,{status:303,headers:{Location:'/admin','Set-Cookie':await sessionCookie(signingSecret,url.origin)}}));
       }
-      const owner=await isOwner(request,env.SB05_ADMIN_KEY);
+      const owner=await isOwner(request,signingSecret);
+      if(url.pathname==='/admin/code'){
+        if(!owner)return request.method==='GET'?redirect('/admin/login'):security(reply({error:'Owner sign-in required.'},403));
+        if(request.method==='GET')return security(new Response(codePage(),{headers:{'Content-Type':'text/html; charset=utf-8'}}));
+        if(request.method!=='POST'||request.headers.get('Origin')!==url.origin)return security(reply({error:'Request not accepted.'},403));
+        const form=await readLoginForm(request),candidate=form instanceof URLSearchParams?form.get('code')||'':'';
+        const confirmation=form instanceof URLSearchParams?form.get('confirm')||'':'';
+        const error=candidate!==confirmation?'The codes do not match.':candidate.length<8||candidate.length>128||!candidate.trim()?'Use a code with 8 to 128 characters.':'';
+        if(error)return security(new Response(codePage(error),{status:400,headers:{'Content-Type':'text/html; charset=utf-8'}}));
+        const next=await this.auth.change(candidate,credential);
+        if(!next)return security(reply({error:'Your owner code changed in another session. Please sign in again.'},409));
+        return security(new Response(codeSavedPage(),{headers:{'Content-Type':'text/html; charset=utf-8','Set-Cookie':await sessionCookie(this.auth.sessionSecret(next),url.origin)}}));
+      }
       if(url.pathname==='/admin'&&!owner)return redirect('/admin/login');
       const headers=new Headers(request.headers);
       for(const name of [...headers.keys()])if(name.toLowerCase().startsWith('oai-'))headers.delete(name);
