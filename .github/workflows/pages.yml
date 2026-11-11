@@ -24,6 +24,7 @@ jobs:
       - run: node build.cjs --pages
       - run: node test-forma.mjs
       - run: node test-forma-batches.mjs
+      - run: node test-kpis.cjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

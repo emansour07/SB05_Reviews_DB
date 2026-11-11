@@ -48,6 +48,24 @@ function reviewOutcome(r){return [...new Set(r.files.map(outcome))].sort().join(
 function urgency(r,t){if(!isOpen(r))return isClosed(r)?'Closed':r.status;if(r.due===null)return 'No due date';if(r.due<t)return 'Overdue';if(r.due<=t+2*DAY)return 'Due in 48h';return 'On track';}
 function stats(rows,t){const open=rows.filter(isOpen),closed=rows.filter(isClosed),files=rows.flatMap(r=>r.files),outcomes={};for(const f of files){const k=outcome(f);outcomes[k]=(outcomes[k]||0)+1;}const cycles=closed.filter(r=>r.created!==null&&r.finished!==null&&r.finished>=r.created).map(r=>(r.finished-r.created)/DAY);return {total:rows.length,open:open.length,closed:closed.length,overdue:open.filter(r=>urgency(r,t)==='Overdue').length,dueSoon:open.filter(r=>urgency(r,t)==='Due in 48h').length,noDue:open.filter(r=>!r.due).length,files:files.length,outcomes,rework:closed.filter(r=>r.files.some(f=>/revise|re-submit|resubmit|reject/i.test(outcome(f)))).length,cycle:cycles.length?cycles.reduce((a,b)=>a+b,0)/cycles.length:null,cycleN:cycles.length,closeRate:rows.length?closed.length/rows.length:0};}
 function compare(current,previous){if(!previous)return null;const a=new Map(previous.reviews.map(r=>[r.id,r])),b=new Map(current.reviews.map(r=>[r.id,r]));return {added:current.reviews.filter(r=>!a.has(r.id)),closed:current.reviews.filter(r=>a.has(r.id)&&isOpen(a.get(r.id))&&isClosed(r)),reopened:current.reviews.filter(r=>a.has(r.id)&&isClosed(a.get(r.id))&&isOpen(r)),removed:previous.reviews.filter(r=>!b.has(r.id)),changed:current.reviews.filter(r=>a.has(r.id)&&JSON.stringify(r)!==JSON.stringify(a.get(r.id)))};}
-root.SB05={DAY,date,discipline,parseWorkbook,isOpen,isClosed,outcome,reviewOutcome,urgency,stats,compare};
+const SIZE_BANDS=['1–4','5–10','11–20','>20'], AGE_BANDS=['≤1 day','>1–2 days','>2–3 days','>3 days'];
+const pdfCount=r=>(r.files||[]).filter(f=>/\.pdf$/i.test(clean(f.name))).length;
+const sizeBand=n=>n<1?'No PDFs':n<5?'1–4':n<=10?'5–10':n<=20?'11–20':'>20';
+function reviewDays(r,t){const end=isClosed(r)?r.finished:isOpen(r)?t:null;return Number.isFinite(r.created)&&Number.isFinite(end)&&end>=r.created?(end-r.created)/DAY:null;}
+const ageBand=n=>n===null?'Unknown age':n<=1?'≤1 day':n<=2?'>1–2 days':n<=3?'>2–3 days':'>3 days';
+function drawingMetrics(rows,t,scope='open'){
+ const result={total:0,open:0,closed:0,other:0,packages:0,noPdfPackages:0,sizes:Object.fromEntries(SIZE_BANDS.map(k=>[k,0])),age:Object.fromEntries(AGE_BANDS.map(k=>[k,0])),unknownAge:0,ageTotal:0,cumulative:[0,0,0]};
+ for(const r of rows){if(/\bVOID(?:ED)?\b/i.test(r.status))continue;const n=pdfCount(r);if(!n){result.noPdfPackages++;continue;}result.total+=n;result.packages++;result.sizes[sizeBand(n)]++;result[isOpen(r)?'open':isClosed(r)?'closed':'other']+=n;
+  if(scope==='open'?!isOpen(r):!isClosed(r))continue;result.ageTotal+=n;const days=reviewDays(r,t);if(days===null){result.unknownAge+=n;continue;}result.age[ageBand(days)]+=n;for(let i=0;i<3;i++)if(days<=i+1)result.cumulative[i]+=n;
+ }return result;
+}
+function workloadMatches(r,value,t){if(!value)return true;const [kind,arg,band]=value.split('|'),n=pdfCount(r);if(kind==='size'&&arg==='No PDFs')return n===0;if(!n)return false;
+ if(kind==='all')return true;if(kind==='state')return arg==='Reviewed'?isClosed(r):arg==='Under review'?isOpen(r):!isOpen(r)&&!isClosed(r);
+ if(kind==='size')return sizeBand(n)===arg;
+ if(kind==='age'||kind==='within'){if(arg==='open'?!isOpen(r):!isClosed(r))return false;const days=reviewDays(r,t);return kind==='age'?ageBand(days)===band:days!==null&&days<=Number(band);}
+ return false;
+}
+function workloadLabel(value){const [kind,arg,band]=value.split('|');return kind==='all'?'PDF drawings':kind==='state'?arg+' · PDFs':kind==='size'?arg+' drawings / package':kind==='within'?'Within '+band+' days · '+(arg==='open'?'under review':'completed'):kind==='age'?band+' · '+(arg==='open'?'under review':'completed'):value;}
+root.SB05={DAY,date,discipline,parseWorkbook,isOpen,isClosed,outcome,reviewOutcome,urgency,stats,compare,pdfCount,sizeBand,reviewDays,ageBand,drawingMetrics,workloadMatches,workloadLabel,SIZE_BANDS,AGE_BANDS};
 if(typeof module!=='undefined')module.exports=root.SB05;
 })(typeof window!=='undefined'?window:globalThis);

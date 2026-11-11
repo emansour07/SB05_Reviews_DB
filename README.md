@@ -11,6 +11,14 @@ Single-page review dashboard for management and discipline leads: ARX header, ov
 
 GitHub Pages serves the dashboard; Cloudflare handles Autodesk authentication, encrypted tokens and shared storage. No ChatGPT hosting or account is needed for this deployment. Credentials and project logs are never committed to this repository. Public viewing is enabled: anyone with the link can read and export the register.
 
+## Drawing KPIs
+
+Each PDF drawing counts as one sheet within its review package; DWG copies and models are excluded. Resubmissions in different packages count again. Reviewed drawings belong to closed packages, including rejected or returned packages. Under-review drawings belong to open packages.
+
+The age chart uses calendar days since submission for open packages, and submission-to-finish duration for completed packages. Each drawing carries its package age. Age bands are non-overlapping: ≤1, >1–2, >2–3 and >3 days. Cumulative within-1/2/3-day figures intentionally overlap. Missing or invalid dates appear separately.
+
+Package-size bands are 1–4, 5–10, 11–20 and >20 PDF drawings. Packages without PDFs are excluded from this distribution and disclosed. Charts can be scoped to a discipline and clicked to filter the register. The register and CSV include drawing counts and age. Run `node test-kpis.cjs` to validate boundaries, drawing weights and filters.
+
 ## Updates
 
 Any viewer can press **Refresh** to request an Autodesk Forma update. The connector processes up to 20 Autodesk reads per batch, saving its progress between requests to fit the Cloudflare Free plan. Only a complete, validated result replaces the shared report; failed updates keep the last saved data.

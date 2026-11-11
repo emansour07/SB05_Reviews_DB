@@ -21,6 +21,7 @@ jobs:
       - run: node build.cjs --pages
       - run: node test-forma.mjs
       - run: node test-forma-batches.mjs
+      - run: node test-kpis.cjs
       - name: Deploy Worker
         run: npx --yes wrangler@4.160.0 deploy
         env:
