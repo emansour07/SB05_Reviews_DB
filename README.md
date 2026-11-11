@@ -4,7 +4,7 @@ Single-page review dashboard for management and discipline leads: ARX header, ov
 
 ## Hosting and access
 
-- Frontend: https://emansour07.github.io/SB05_Reviews_DB/
+- Canonical team dashboard: https://emansour07.github.io/SB05_Reviews_DB/ — publish future updates in place at this same address.
 - Cloudflare backend: https://sb05-reviews-api.eslam-mansour.workers.dev
 - Owner controls: backend `/admin`, protected by a private owner key.
 - Team members open the GitHub Pages link without an account or password.
@@ -13,11 +13,11 @@ GitHub Pages serves the dashboard; Cloudflare handles Autodesk authentication, e
 
 ## Drawing KPIs
 
-Each PDF drawing counts as one sheet within its review package; DWG copies and models are excluded. Resubmissions in different packages count again. Reviewed drawings belong to closed packages, including rejected or returned packages. Under-review drawings belong to open packages.
+Each classified drawing PDF counts as one sheet within its review package. Drawing KPIs exclude report PDFs, other documents, unclassified PDFs, DWG copies and models. The owner-confirmed SB05 document code `SDW` identifies shop drawings. A PDF also counts as a drawing when a DWG, DXF or DGN file with the same base filename (case-insensitive) exists in the same package. CAD pairing is never borrowed from another package. Explicit `Document type` values in uploads take precedence; clear filename labels identify drawings, reports and supporting documents. Unknown codes or conflicting filename clues remain unclassified. Classification uses file metadata/names, not PDF content inspection. The document-type totals, register, detail list and CSV keep these groups separate. Resubmissions in different packages count again. Reviewed drawings belong to closed packages, including rejected or returned packages. Under-review drawings belong to open packages.
 
 The age chart uses calendar days since submission for open packages, and submission-to-finish duration for completed packages. Each drawing carries its package age. Age bands are non-overlapping: ≤1, >1–2, >2–3 and >3 days. Cumulative within-1/2/3-day figures intentionally overlap. Missing or invalid dates appear separately.
 
-Package-size bands are 1–4, 5–10, 11–20 and >20 PDF drawings. Packages without PDFs are excluded from this distribution and disclosed. Charts can be scoped to a discipline and clicked to filter the register. The register and CSV include drawing counts and age. Run `node test-kpis.cjs` to validate boundaries, drawing weights and filters.
+Package-size bands are 1–4, 5–10, 11–20 and >20 PDF drawings. Packages without drawings are excluded from this distribution and disclosed. Charts can be scoped to a discipline and clicked to filter the register. The register and CSV include drawing counts and age. Run `node test-kpis.cjs` to validate boundaries, drawing weights and filters.
 
 ## Updates
 

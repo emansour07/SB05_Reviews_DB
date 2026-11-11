@@ -1,0 +1,23 @@
+const assert=require('node:assert/strict'),C=require('./core.js');
+const sdw='R05H02-C063-BCR-01-B02-SDW-AR-AR-10002.pdf';
+for(const [name,type] of [[sdw,'drawing'],['Structural design report.pdf','report'],['Progress_Report_01.PDF','report'],['Fire drawings.pdf','drawing'],['Method_statement.pdf','other'],['Specification.pdf','other'],['R05H02-C063-BCR-01-B02-REP-ST-ST-00001.pdf','unclassified'],['Attachment.pdf','unclassified'],[sdw.replace('.pdf','-report.pdf'),'unclassified'],['model.rvt','nonPdf'],['report.pdf.tmp','nonPdf']])assert.equal(C.pdfType({name}),type,name);
+assert.equal(C.pdfType({name:sdw,documentType:'Report'}),'report','Explicit document type wins');
+assert.equal(C.pdfType({name:'attachment.pdf',documentType:'SDW'}),'drawing');
+const t=10*C.DAY,make=(n)=>Array.from({length:n},()=>({name:sdw}));
+const mixed={status:'OPEN',created:t-2*C.DAY,files:[...make(4),{name:'Design report.pdf'},{name:'Specification.pdf'},{name:'Attachment.pdf'},{name:'Model.rvt'}]};
+const reportOnly={status:'CLOSED',created:0,finished:C.DAY,files:[{name:'Report.pdf'}]};
+const metrics=C.drawingMetrics([mixed,reportOnly],t);
+assert.equal(C.pdfCount(mixed),7);assert.equal(C.drawingCount(mixed),4);assert.equal(metrics.total,4);assert.equal(metrics.packages,1);assert.equal(metrics.noDrawingPackages,1);assert.equal(metrics.sizes['1–4'],1);assert.equal(metrics.sizes['5–10'],0);assert.equal(metrics.age['>1–2 days'],4);assert.deepEqual(metrics.pdfTypes,{drawing:4,report:2,other:1,unclassified:1});
+assert.equal(C.workloadMatches(reportOnly,'document|report',t),true);assert.equal(C.workloadMatches(reportOnly,'state|Reviewed',t),false);assert.equal(C.workloadMatches(mixed,'document|unclassified',t),true);assert.equal(C.workloadMatches(reportOnly,'size|No drawings',t),true);
+console.log('PASS document types: confirmed SDW, explicit type, reports, other/unknown PDFs, conflicting clues, report-only and mixed packages, drawing-only age/size totals and filters.');
+
+const paired=[{name:'Generic-123.PDF'},{name:'generic-123.dwg'}];
+assert.equal(C.pdfType(paired[0],paired),'drawing');assert.equal(C.drawingCount({files:paired}),1);
+for(const ext of ['DXF','DGN'])assert.equal(C.pdfType({name:'plan.pdf'},[{name:'PLAN.'+ext}]),'drawing');
+assert.equal(C.pdfType({name:'plan.pdf'},[{name:'other-plan.dwg'}]),'unclassified');
+assert.equal(C.pdfType({name:'plan.pdf'},[{name:'plan.rvt'}]),'unclassified');
+assert.equal(C.pdfType({name:'plan.pdf'},[]),'unclassified','Matching files in another package must not count');
+assert.equal(C.pdfType({name:'Report.pdf'},[{name:'report.dwg'}]),'unclassified','Conflicting clues need classification');
+assert.equal(C.pdfType({name:'plan.pdf',documentType:'report'},[{name:'plan.dwg'}]),'report');
+assert.equal(C.pdfType({name:'plan.pdf',documentType:'constructor'}),'unclassified');
+console.log('PASS CAD pairing: matching base names, case-insensitivity, DWG/DXF/DGN, package scope, non-CAD exclusion and explicit report precedence.');

@@ -22,6 +22,7 @@ jobs:
       - run: node test-forma.mjs
       - run: node test-forma-batches.mjs
       - run: node test-kpis.cjs
+      - run: node test-pdf-types.cjs
       - name: Deploy Worker
         run: npx --yes wrangler@4.160.0 deploy
         env:
