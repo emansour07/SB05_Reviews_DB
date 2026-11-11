@@ -1,6 +1,6 @@
 # SB05 Review Dashboard
 
-Single-page review dashboard for management and discipline leads: ARX header, overview charts, discipline filters and review register. Click a status, outcome, discipline or deadline indicator to filter the register. Void reviews are excluded; overdue and due-in-48-hours indicators are retained.
+Single-page review dashboard for management and discipline leads: ARX header, overview charts, discipline filters and review register. Click a status, outcome, discipline or deadline indicator to filter the register. The Autodesk Forma icon beside a review name opens that exact review in a new tab; clicking the name still opens its document panel. Direct links use the Autodesk review UUID, never the displayed sequence number. Imported rows without an Autodesk UUID do not show an invented link. Void reviews are excluded; overdue and due-in-48-hours indicators are retained.
 
 ## Hosting and access
 
@@ -61,3 +61,5 @@ Tests cover authentication, forged headers, storage conflicts, pagination, batch
 - [Reviews API](https://aps.autodesk.com/en/docs/acc/v1/reference/http/reviews-reviews-GET/)
 - [Cloudflare Durable Objects](https://developers.cloudflare.com/durable-objects/)
 - ARX logo: vector from https://www.arx.ing/en, retrieved 11 November 2026. The logo belongs to its owner.
+
+- Autodesk Forma icon: original application favicon from https://acc.autodesk.com/assets/exo/1167/favicon.ico, retrieved 11 November 2026. The icon belongs to Autodesk.

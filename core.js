@@ -86,6 +86,7 @@ function workloadMatches(r,value,t){if(!value)return true;const [kind,arg,band]=
  return false;
 }
 function workloadLabel(value){const [kind,arg,band]=value.split('|');return kind==='document'?PDF_LABELS[arg]:kind==='all'?'Drawings':kind==='state'?arg+' · drawings':kind==='size'?arg+' drawings / package':kind==='within'?'Within '+band+' days · '+(arg==='open'?'under review':'completed'):kind==='age'?band+' · '+(arg==='open'?'under review':'completed'):value;}
-root.SB05={DAY,date,discipline,parseWorkbook,isOpen,isClosed,outcome,reviewOutcome,urgency,stats,compare,pdfCount,drawingCount,pdfCounts,pdfType,pdfClassification,PDF_TYPES,PDF_LABELS,sizeBand,reviewDays,ageBand,drawingMetrics,workloadMatches,workloadLabel,SIZE_BANDS,AGE_BANDS};
+function formaReviewUrl(r,project){const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;const projectId=clean(project).replace(/^b\./,'');return uuid.test(projectId)&&uuid.test(r.autodeskId||'')?'https://acc.autodesk.com/docs/reviews/projects/'+projectId+'/'+r.autodeskId:null;}
+root.SB05={DAY,date,discipline,parseWorkbook,isOpen,isClosed,outcome,reviewOutcome,urgency,stats,compare,pdfCount,drawingCount,pdfCounts,pdfType,pdfClassification,PDF_TYPES,PDF_LABELS,sizeBand,reviewDays,ageBand,drawingMetrics,workloadMatches,workloadLabel,SIZE_BANDS,AGE_BANDS,formaReviewUrl};
 if(typeof module!=='undefined')module.exports=root.SB05;
 })(typeof window!=='undefined'?window:globalThis);
