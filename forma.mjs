@@ -14,14 +14,14 @@ async function seal(env,value){const iv=crypto.getRandomValues(new Uint8Array(12
 async function unseal(env,value){const from=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));return JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:from(value.iv)},await aes(env),from(value.body))));}
 async function hash(s){return [...new Uint8Array(await crypto.subtle.digest('SHA-256',enc.encode(s)))].map(v=>v.toString(16).padStart(2,'0')).join('');}
 async function tokenRequest(env,body){
- const r=await fetch(API+'/authentication/v2/token',{method:'POST',redirect:'error',signal:AbortSignal.timeout(20000),headers:{Authorization:'Basic '+btoa(env.APS_CLIENT_ID+':'+env.APS_CLIENT_SECRET),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(body)});
+ const r=await fetch(API+'/authentication/v2/token',{method:'POST',redirect:'manual',signal:AbortSignal.timeout(20000),headers:{Authorization:'Basic '+btoa(env.APS_CLIENT_ID+':'+env.APS_CLIENT_SECRET),'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams(body)});
  if(!r.ok)throw Error('Autodesk authorization failed. Reconnect Autodesk or check the application settings.');
  const t=await r.json();if(!t.access_token||!t.refresh_token||!Number.isFinite(t.expires_in))throw Error('Invalid Autodesk token response.');
  return {...t,expiresAt:Date.now()+t.expires_in*1000};
 }
 async function accessToken(env){const saved=await readF(env,'tokens');if(!saved)throw Error('Autodesk is not connected.');let t=await unseal(env,saved.value);if(t.expiresAt<Date.now()+120000){t=await tokenRequest(env,{grant_type:'refresh_token',refresh_token:t.refresh_token});if(!await putF(env,'tokens',await seal(env,t),saved.etag))throw Error('Connection changed. Retry synchronization.');}return t.access_token;}
 async function getAPS(path,token){
- const r=await fetch(API+path,{headers:{Authorization:'Bearer '+token},redirect:'error',signal:AbortSignal.timeout(20000)});
+ const r=await fetch(API+path,{headers:{Authorization:'Bearer '+token},redirect:'manual',signal:AbortSignal.timeout(20000)});
  if(!r.ok){const e=new Error(r.status===429?'Autodesk request limit reached. The previous snapshot is retained.':r.status===403?'Autodesk denied project access. Ask the Account Admin to register the Client ID in Custom Integrations.':r.status===401?'Autodesk authorization expired. Reconnect Autodesk.':'Autodesk review retrieval failed. The previous snapshot is retained.');e.status=r.status;throw e;}
  return r.json();
 }
@@ -105,3 +105,4 @@ export async function formaRoutes(request,env,owner,readSnapshot,validate){
  }
  return fj({error:'Method or route not supported.'},405);
 }
+

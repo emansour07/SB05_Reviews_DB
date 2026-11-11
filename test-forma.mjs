@@ -21,6 +21,7 @@ const start=await (await call('/api/forma/connect','POST')).json(),oauth=new URL
 assert.equal((await call('/api/forma/callback?state=bad&code=x')).status,400);
 const originalFetch=globalThis.fetch;let tokenCalls=0;
 globalThis.fetch=async(url,options)=>{
+ assert.equal(options.redirect,'manual','Autodesk requests must use the edge-supported manual redirect mode');
  if(url.includes('/authentication/v2/token')){tokenCalls++;return Response.json({access_token:'fixture-access',refresh_token:'fixture-refresh',expires_in:3600});}
  if(url.includes('/reviews?'))return Response.json({results:[r,{id:'void-uuid',status:'VOID'}],pagination:{totalResults:2}});
  if(url.endsWith('/workflow'))return Response.json(w);
@@ -35,8 +36,12 @@ try{
  const snapshot=await (await call('/api/snapshot','GET',{})).json();assert.equal(snapshot.current.source,'forma');assert.equal(snapshot.current.voidCount,1);assert.equal(snapshot.current.reviews[0].files[0].status,'Revise and Re-submit');
  const cached=await (await call('/api/forma/sync','POST')).json();assert.equal(cached.skipped,true);
  const status=env.BUCKET.map.get('sb05/forma/status');const value=JSON.parse(status.body);value.nextAttemptAt=0;await env.BUCKET.put('sb05/forma/status',JSON.stringify(value));
- globalThis.fetch=async()=>new Response('Denied',{status:403});
- assert.equal((await call('/api/forma/sync','POST')).status,503);assert.deepEqual(await (await call('/api/snapshot','GET',{})).json(),snapshot);
+ for(const failureStatus of [403,302]){
+  const failureState=JSON.parse(env.BUCKET.map.get('sb05/forma/status').body);failureState.nextAttemptAt=0;await env.BUCKET.put('sb05/forma/status',JSON.stringify(failureState));
+  globalThis.fetch=async(url,options)=>{assert.equal(options.redirect,'manual');return new Response('Denied',{status:failureStatus,headers:{Location:'https://unexpected.example/'}});};
+  assert.equal((await call('/api/forma/sync','POST')).status,503);assert.deepEqual(await (await call('/api/snapshot','GET',{})).json(),snapshot);
+ }
  const cors=await call('/api/snapshot','GET',{Origin:'https://emansour07.github.io'});assert.equal(cors.headers.get('Access-Control-Allow-Origin'),'https://emansour07.github.io');
 }finally{globalThis.fetch=originalFetch;}
 console.log('PASS Forma: exact outcomes and dates, pagination completeness, owner/origin checks, OAuth replay rejection, encrypted tokens, void exclusion, publish, throttling, failure retention, GitHub read CORS. Live Autodesk access remains unverified.');
+
