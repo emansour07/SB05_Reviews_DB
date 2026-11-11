@@ -39,6 +39,8 @@ After the first successful live verification:
 - Run **Synchronize Forma** once and confirm success. The workflow then requests synchronization every five minutes. GitHub schedules may be delayed; this is near-live polling, not guaranteed instantaneous delivery.
 - Open dashboards reread the central snapshot every 30 seconds. Rebuilding or resending the HTML is unnecessary.
 
+Any viewer can use **Refresh** to request a new Forma synchronization through the backend. The fixed SB05 project and encrypted Autodesk credentials stay server-side. Refresh requests from the hosted dashboard or GitHub Pages share a one-minute cooldown, a synchronization lock, and failure/rate-limit backoff. Uploads and Autodesk connection management remain owner-only. Viewers see last-update times and simple update messages; technical connection controls and source notes are hidden, and unavailable round/comment fields are omitted for Forma data.
+
 The scheduler calls only the backend, using its separate authorization token. Provider access/refresh tokens are encrypted in private R2 objects. The public read API exposes only the dashboard snapshot and a sanitized connection status.
 
 Failed, incomplete or unexpectedly empty fetches do not replace the existing snapshot. Rate limits defer the next attempt. Concurrent syncs use a conditional R2 lease and uploads/syncs use revision checks.
@@ -71,3 +73,4 @@ Never commit `.env`, client secrets, access/refresh tokens, uploaded reports or 
 - ARX logo: vector from https://www.arx.ing/en, retrieved 11 November 2026.
 
 Logos belong to their respective organizations and identify the project parties.
+

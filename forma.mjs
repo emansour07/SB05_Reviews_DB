@@ -51,12 +51,13 @@ export function mapFormaReview(r,w,versions){
 }
 async function lease(env){const old=await readF(env,'lease');if(old?.value.until>Date.now())return null;const id=crypto.randomUUID();const saved=await env.BUCKET.put(FROOT+'lease',JSON.stringify({id,until:Date.now()+600000}),{onlyIf:old?{etagMatches:old.etag}:new Headers({'If-None-Match':'*'})});return saved?{id,etag:saved.etag}:null;}
 async function release(env,l){await putF(env,'lease',{id:l.id,until:0},l.etag);}
-export async function syncForma(env,readSnapshot,validate,force=false){
+export async function syncForma(env,readSnapshot,validate,manual=false){
  if(!configured(env)||!env.BUCKET)throw Error('Autodesk application setup is incomplete.');
- const l=await lease(env);if(!l)return {skipped:true,reason:'Synchronization is already running.'};
+ const l=await lease(env);if(!l)return {skipped:true,updating:true,reason:'An update is in progress.'};
  try{
   const state=(await readF(env,'status'))?.value||{};
-  if(!force&&state.nextAttemptAt>Date.now())return {skipped:true,reason:'Waiting for the next synchronization interval.'};
+  const nextAllowed=manual&&!state.error?(state.lastAttemptAt||0)+60000:state.nextAttemptAt||0;
+  if(nextAllowed>Date.now())return {skipped:true,retryAfterMs:nextAllowed-Date.now(),reason:'Latest saved update loaded.'};
   await putF(env,'status',{...state,lastAttemptAt:Date.now(),nextAttemptAt:Date.now()+PERIOD});
   const before=await readSnapshot(env),token=await accessToken(env),base='/construction/reviews/v1/projects/'+FORMA_PROJECT;
   const raw=await listAPS(base+'/reviews?sort=sequenceId%20asc',token),reviews=[];let voidCount=0;
@@ -78,6 +79,13 @@ export async function formaRoutes(request,env,owner,readSnapshot,validate){
   const state=env.BUCKET?(await readF(env,'status'))?.value||{}:{};
   const tokens=env.BUCKET?!!await readF(env,'tokens'):false;
   return fj({configured:configured(env),connected:tokens,projectId:FORMA_PROJECT,lastSuccessAt:state.lastSuccessAt||null,lastAttemptAt:state.lastAttemptAt||null,error:state.error||null,intervalMinutes:5,...(owner?{callbackUrl:u.origin+'/api/forma/callback',schedulerConfigured:!!env.SB05_SYNC_SECRET}: {})});
+ }
+ if(path==='/api/forma/refresh'&&request.method==='POST'){
+  if(![u.origin,'https://emansour07.github.io'].includes(request.headers.get('Origin')))return fj({error:'Refresh is unavailable from this page.'},403);
+  if(request.body)return fj({error:'Refresh does not accept data.'},400);
+  if(!configured(env)||!env.BUCKET||!await readF(env,'tokens'))return fj({skipped:true,available:false});
+  try{const result=await syncForma(env,readSnapshot,validate,true);return fj({ok:!!result.ok,skipped:!!result.skipped,updating:!!result.updating,lastSuccessAt:result.lastSuccessAt||null,retryAfterMs:result.retryAfterMs||0});}
+  catch{return fj({error:'Unable to update right now. Your last saved reviews are still available.'},503);}
  }
  if(path==='/api/forma/sync'&&request.method==='POST'){
   const bearer=request.headers.get('Authorization')||'',service=!!env.SB05_SYNC_SECRET&&await hash(bearer)===await hash('Bearer '+env.SB05_SYNC_SECRET);

@@ -13,6 +13,12 @@ const source=await fs.readFile(new URL('./dist/server/index.js',import.meta.url)
 const env={BUCKET:new Bucket(),SB05_UPLOADER_EMAIL:'owner@test.example',APS_CLIENT_ID:'fixture-client',APS_CLIENT_SECRET:'fixture-secret',APS_CALLBACK_URL:'https://site.test/api/forma/callback',APS_TOKEN_KEY:btoa('a'.repeat(32)),SB05_SYNC_SECRET:'fixture-sync'};
 const headers={'oai-authenticated-user-id':'owner-id','oai-authenticated-user-email':env.SB05_UPLOADER_EMAIL,Origin:'https://site.test'};
 const call=(path,method='GET',hdr=headers)=>worker.fetch(new Request('https://site.test'+path,{method,headers:hdr}),env);
+const viewerHeaders={Origin:'https://emansour07.github.io'};
+assert.equal((await call('/api/forma/refresh','POST',{})).status,403);
+assert.equal((await call('/api/forma/refresh','POST',{Origin:'https://evil.test'})).status,403);
+assert.equal((await call('/api/forma/refresh','GET',viewerHeaders)).status,403);
+assert.equal((await call('/api/forma/connect','POST',viewerHeaders)).status,403);
+const disconnected=await call('/api/forma/refresh','POST',viewerHeaders);assert.equal(disconnected.status,200);assert.equal((await disconnected.json()).available,false);
 assert.equal((await call('/api/forma/connect','POST',{})).status,403);
 assert.equal((await call('/api/forma/connect','POST',{...headers,Origin:'https://evil.test'})).status,403);
 assert.equal((await call('/api/forma/sync','POST',{})).status,403);
@@ -33,13 +39,25 @@ try{
  assert.equal((await call('/api/forma/callback?state='+state+'&code=test')).status,400);assert.equal(tokenCalls,1);
  const savedTokens=env.BUCKET.map.get('sb05/forma/tokens').body;assert(!savedTokens.includes('fixture-access'));assert(!savedTokens.includes('fixture-refresh'));
  const sync=await call('/api/forma/sync','POST');assert.equal(sync.status,200);assert.equal((await sync.json()).reviewCount,1);
- const snapshot=await (await call('/api/snapshot','GET',{})).json();assert.equal(snapshot.current.source,'forma');assert.equal(snapshot.current.voidCount,1);assert.equal(snapshot.current.reviews[0].files[0].status,'Revise and Re-submit');
+ let snapshot=await (await call('/api/snapshot','GET',{})).json();assert.equal(snapshot.current.source,'forma');assert.equal(snapshot.current.voidCount,1);assert.equal(snapshot.current.reviews[0].files[0].status,'Revise and Re-submit');
  const cached=await (await call('/api/forma/sync','POST')).json();assert.equal(cached.skipped,true);
+ const recent=await call('/api/forma/refresh','POST',viewerHeaders);assert.equal(recent.headers.get('Access-Control-Allow-Origin'),viewerHeaders.Origin);assert.equal((await recent.json()).skipped,true);
+ const realNow=Date.now,afterMinute=realNow()+61000;
+ Date.now=()=>afterMinute;
+ try{
+  const fresh=await call('/api/forma/refresh','POST',viewerHeaders);assert.equal(fresh.status,200);assert.equal((await fresh.json()).ok,true);
+  const latest=await (await call('/api/snapshot','GET',{})).json();assert.equal(latest.revision,snapshot.revision+1);snapshot=latest;
+  assert.equal((await (await call('/api/forma/refresh','POST',viewerHeaders)).json()).skipped,true);
+  await env.BUCKET.put('sb05/forma/lease',JSON.stringify({id:'another-viewer',until:Date.now()+10000}));
+  assert.equal((await (await call('/api/forma/refresh','POST',viewerHeaders)).json()).updating,true);
+  await env.BUCKET.put('sb05/forma/lease',JSON.stringify({id:'released',until:0}));
+ }finally{Date.now=realNow;}
  const status=env.BUCKET.map.get('sb05/forma/status');const value=JSON.parse(status.body);value.nextAttemptAt=0;await env.BUCKET.put('sb05/forma/status',JSON.stringify(value));
  for(const failureStatus of [403,302]){
   const failureState=JSON.parse(env.BUCKET.map.get('sb05/forma/status').body);failureState.nextAttemptAt=0;await env.BUCKET.put('sb05/forma/status',JSON.stringify(failureState));
   globalThis.fetch=async(url,options)=>{assert.equal(options.redirect,'manual');return new Response('Denied',{status:failureStatus,headers:{Location:'https://unexpected.example/'}});};
   assert.equal((await call('/api/forma/sync','POST')).status,503);assert.deepEqual(await (await call('/api/snapshot','GET',{})).json(),snapshot);
+  assert.equal((await (await call('/api/forma/refresh','POST',viewerHeaders)).json()).skipped,true,'Viewer refresh must respect failure backoff');
  }
  const cors=await call('/api/snapshot','GET',{Origin:'https://emansour07.github.io'});assert.equal(cors.headers.get('Access-Control-Allow-Origin'),'https://emansour07.github.io');
 }finally{globalThis.fetch=originalFetch;}
