@@ -1,6 +1,6 @@
 # SB05 Review Dashboard
 
-Single-page review dashboard for management and discipline leads: black-and-white ARX theme, ARX header, overview charts, discipline filters and review register. Click a status, outcome, discipline or deadline indicator to filter the register. The Autodesk Forma icon beside a review name opens that exact review in a new tab; clicking the name still opens its document panel. Direct links use the Autodesk review UUID, never the displayed sequence number. Imported rows without an Autodesk UUID do not show an invented link. Void reviews are excluded; overdue and due-in-48-hours indicators are retained.
+Single-page review dashboard for management and discipline leads: black-and-white ARX branding with colored charts and register indicators, ARX header, overview charts, discipline filters and review register. Click a status, outcome, discipline or deadline indicator to filter the register. The Autodesk Forma icon beside a review name opens that exact review in a new tab; clicking the name still opens its document panel. Direct links use the Autodesk review UUID, never the displayed sequence number. Imported rows without an Autodesk UUID do not show an invented link. Void reviews are excluded; overdue and due-in-48-hours indicators are retained.
 
 ## Hosting and access
 
