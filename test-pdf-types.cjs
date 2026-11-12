@@ -24,3 +24,15 @@ console.log('PASS CAD pairing: matching base names, case-insensitivity, DWG/DXF/
 
 for(const name of ['SDW-001.pdf','x_sdw_01.pdf','x-SDW.pdf'])assert.equal(C.pdfType({name}),'drawing',name);
 for(const name of ['ASDW-001.pdf','x-SDW2.pdf','SDW-001.dwg'])assert.notEqual(C.pdfType({name}),'drawing',name);
+
+const pairAndModels={status:'OPEN',created:0,files:[{name:'plan.pdf'},{name:'PLAN.dwg'},...['nwc','NWD','IFC','rvt'].map(ext=>({name:'Building.'+ext}))]};
+assert.equal(C.documentType(pairAndModels.files[0],pairAndModels.files),'drawing');
+assert.equal(C.documentType(pairAndModels.files[1],pairAndModels.files),'drawing');
+for(const f of pairAndModels.files.slice(2))assert.equal(C.documentType(f,pairAndModels.files),'model');
+assert.equal(C.modelCount(pairAndModels),4);assert.equal(C.drawingCount(pairAndModels),1);
+assert.equal(C.drawingMetrics([pairAndModels],t).models,4);
+assert.equal(C.workloadMatches(pairAndModels,'document|model',t),true);
+assert.equal(C.workloadMatches(reportOnly,'document|model',t),false);
+assert.notEqual(C.documentType({name:'model.ifc.pdf'}),'model');
+assert.equal(C.drawingMetrics([{...pairAndModels,status:'VOID'}],t).models,0);
+console.log('PASS document labels: CAD/PDF drawing pair, NWC/NWD/IFC/RVT models, single sheet count, model filters and void exclusion.');

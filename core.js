@@ -50,7 +50,7 @@ function stats(rows,t){const open=rows.filter(isOpen),closed=rows.filter(isClose
 function compare(current,previous){if(!previous)return null;const a=new Map(previous.reviews.map(r=>[r.id,r])),b=new Map(current.reviews.map(r=>[r.id,r]));return {added:current.reviews.filter(r=>!a.has(r.id)),closed:current.reviews.filter(r=>a.has(r.id)&&isOpen(a.get(r.id))&&isClosed(r)),reopened:current.reviews.filter(r=>a.has(r.id)&&isClosed(a.get(r.id))&&isOpen(r)),removed:previous.reviews.filter(r=>!b.has(r.id)),changed:current.reviews.filter(r=>a.has(r.id)&&JSON.stringify(r)!==JSON.stringify(a.get(r.id)))};}
 const SIZE_BANDS=['1–4','5–10','11–20','>20'], AGE_BANDS=['≤1 day','>1–2 days','>2–3 days','>3 days'];
 const PDF_TYPES=['drawing','report','other','unclassified'];
-const PDF_LABELS={drawing:'Drawing',report:'Report',other:'Other document',unclassified:'Unclassified document',nonPdf:'CAD / model / other file'};
+const PDF_LABELS={drawing:'Drawing',model:'Model',report:'Report',other:'Other document',unclassified:'Unclassified document',nonPdf:'CAD / model / other file'};
 function pdfClassification(file,packageFiles=[]){
  const name=clean(file.name);if(!/\.pdf$/i.test(name))return {type:'nonPdf',reason:'CAD, model or other file'};
  const drawingCode=/(?:^|[^A-Z0-9])SDW(?:[^A-Z0-9]|$)/i.test(name.replace(/\.pdf$/i,''));
@@ -66,6 +66,16 @@ function pdfClassification(file,packageFiles=[]){
  if(/\b(?:specifications?|method\s+statements?|transmittals?|cover\s+(?:letters?|sheets?))\b/i.test(words))return {type:'other',reason:'Supporting document identified in filename'};
  return {type:'unclassified',reason:'No SDW code or matching CAD filename; document type not identified'};
 }
+function documentClassification(file,packageFiles=[]){
+ const name=clean(file.name);
+ if(/\.(nwc|nwd|ifc|rvt)$/i.test(name))return {type:'model',reason:'Model format'};
+ if(/\.(dwg|dxf|dgn)$/i.test(name))return {type:'drawing',reason:'CAD drawing'};
+ const result=pdfClassification(file,packageFiles);
+ return result.type==='nonPdf'?{type:'other',reason:'Other document format'}:result;
+}
+const documentType=(file,packageFiles=[])=>documentClassification(file,packageFiles).type;
+const modelCount=r=>(r.files||[]).filter(f=>documentType(f,r.files)==='model').length;
+const documentCount=(r,type)=>type==='model'?modelCount(r):pdfCounts(r)[type]||0;
 const pdfType=(file,packageFiles=[])=>pdfClassification(file,packageFiles).type;
 function pdfCounts(r){const counts={drawing:0,report:0,other:0,unclassified:0,total:0};for(const f of r.files||[]){const type=pdfType(f,r.files);if(type!=='nonPdf'){counts[type]++;counts.total++;}}return counts;}
 const pdfCount=r=>pdfCounts(r).total;
@@ -74,12 +84,12 @@ const sizeBand=n=>n<1?'No drawings':n<5?'1–4':n<=10?'5–10':n<=20?'11–20':'
 function reviewDays(r,t){const end=isClosed(r)?r.finished:isOpen(r)?t:null;return Number.isFinite(r.created)&&Number.isFinite(end)&&end>=r.created?(end-r.created)/DAY:null;}
 const ageBand=n=>n===null?'Unknown age':n<=1?'≤1 day':n<=2?'>1–2 days':n<=3?'>2–3 days':'>3 days';
 function drawingMetrics(rows,t,scope='open'){
- const result={total:0,open:0,closed:0,other:0,packages:0,noDrawingPackages:0,pdfTypes:{drawing:0,report:0,other:0,unclassified:0},sizes:Object.fromEntries(SIZE_BANDS.map(k=>[k,0])),age:Object.fromEntries(AGE_BANDS.map(k=>[k,0])),unknownAge:0,ageTotal:0,cumulative:[0,0,0]};
- for(const r of rows){if(/\bVOID(?:ED)?\b/i.test(r.status))continue;const counts=pdfCounts(r);for(const type of PDF_TYPES)result.pdfTypes[type]+=counts[type];const n=counts.drawing;if(!n){result.noDrawingPackages++;continue;}result.total+=n;result.packages++;result.sizes[sizeBand(n)]++;result[isOpen(r)?'open':isClosed(r)?'closed':'other']+=n;
+ const result={total:0,open:0,closed:0,other:0,packages:0,noDrawingPackages:0,models:0,pdfTypes:{drawing:0,report:0,other:0,unclassified:0},sizes:Object.fromEntries(SIZE_BANDS.map(k=>[k,0])),age:Object.fromEntries(AGE_BANDS.map(k=>[k,0])),unknownAge:0,ageTotal:0,cumulative:[0,0,0]};
+ for(const r of rows){if(/\bVOID(?:ED)?\b/i.test(r.status))continue;const counts=pdfCounts(r);result.models+=modelCount(r);for(const type of PDF_TYPES)result.pdfTypes[type]+=counts[type];const n=counts.drawing;if(!n){result.noDrawingPackages++;continue;}result.total+=n;result.packages++;result.sizes[sizeBand(n)]++;result[isOpen(r)?'open':isClosed(r)?'closed':'other']+=n;
   if(scope==='open'?!isOpen(r):!isClosed(r))continue;result.ageTotal+=n;const days=reviewDays(r,t);if(days===null){result.unknownAge+=n;continue;}result.age[ageBand(days)]+=n;for(let i=0;i<3;i++)if(days<=i+1)result.cumulative[i]+=n;
  }return result;
 }
-function workloadMatches(r,value,t){if(!value)return true;const [kind,arg,band]=value.split('|'),n=drawingCount(r);if(kind==='document')return PDF_TYPES.includes(arg)&&pdfCounts(r)[arg]>0;if(kind==='size'&&arg==='No drawings')return n===0;if(!n)return false;
+function workloadMatches(r,value,t){if(!value)return true;const [kind,arg,band]=value.split('|'),n=drawingCount(r);if(kind==='document')return [...PDF_TYPES,'model'].includes(arg)&&documentCount(r,arg)>0;if(kind==='size'&&arg==='No drawings')return n===0;if(!n)return false;
  if(kind==='all')return true;if(kind==='state')return arg==='Reviewed'?isClosed(r):arg==='Under review'?isOpen(r):!isOpen(r)&&!isClosed(r);
  if(kind==='size')return sizeBand(n)===arg;
  if(kind==='age'||kind==='within'){if(arg==='open'?!isOpen(r):!isClosed(r))return false;const days=reviewDays(r,t);return kind==='age'?ageBand(days)===band:days!==null&&days<=Number(band);}
@@ -87,6 +97,6 @@ function workloadMatches(r,value,t){if(!value)return true;const [kind,arg,band]=
 }
 function workloadLabel(value){const [kind,arg,band]=value.split('|');return kind==='document'?PDF_LABELS[arg]:kind==='all'?'Drawings':kind==='state'?arg+' · drawings':kind==='size'?arg+' drawings / package':kind==='within'?'Within '+band+' days · '+(arg==='open'?'under review':'completed'):kind==='age'?band+' · '+(arg==='open'?'under review':'completed'):value;}
 function formaReviewUrl(r,project){const uuid=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;const projectId=clean(project).replace(/^b\./,'');return uuid.test(projectId)&&uuid.test(r.autodeskId||'')?'https://acc.autodesk.com/docs/reviews/projects/'+projectId+'/'+r.autodeskId:null;}
-root.SB05={DAY,date,discipline,parseWorkbook,isOpen,isClosed,outcome,reviewOutcome,urgency,stats,compare,pdfCount,drawingCount,pdfCounts,pdfType,pdfClassification,PDF_TYPES,PDF_LABELS,sizeBand,reviewDays,ageBand,drawingMetrics,workloadMatches,workloadLabel,SIZE_BANDS,AGE_BANDS,formaReviewUrl};
+root.SB05={DAY,date,discipline,parseWorkbook,isOpen,isClosed,outcome,reviewOutcome,urgency,stats,compare,pdfCount,drawingCount,pdfCounts,pdfType,pdfClassification,documentType,documentClassification,modelCount,documentCount,PDF_TYPES,PDF_LABELS,sizeBand,reviewDays,ageBand,drawingMetrics,workloadMatches,workloadLabel,SIZE_BANDS,AGE_BANDS,formaReviewUrl};
 if(typeof module!=='undefined')module.exports=root.SB05;
 })(typeof window!=='undefined'?window:globalThis);

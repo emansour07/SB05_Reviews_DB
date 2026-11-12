@@ -25,3 +25,5 @@
 
 /* Forma link leads each workflow name like a clickable bullet. */
 .review-name{gap:7px}.review-name>button{padding-top:3px}.forma-review-link{flex:0 0 24px;width:24px;height:24px;border:0;background:transparent}.forma-review-link:hover{background:#eee}
+
+.document-type.model{background:#e9f0fa;color:#466991}@media(min-width:651px) and (max-width:1000px){.pdf-type-total{padding:9px 10px;gap:8px}.pdf-type-total span{font-size:10px}.pdf-type-total b{font-size:19px}}
