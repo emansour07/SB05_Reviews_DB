@@ -22,3 +22,6 @@
 /* Black-and-white ARX branding with color retained for data and status cues. */
 :root{--navy:#111111;--ink:#171717;--muted:#656565;--line:#dedede;--bg:#f5f5f5}
 .topbar{background:#111;color:#fff;box-shadow:0 3px 14px #00000012}.topbar .ghost{border-color:#626262;color:#fff}.topbar nav a,.connection{color:#d7d7d7}.primary{background:#111;color:#fff;border-color:#111}.topbar .primary{background:#fff;color:#111;border-color:#fff}.topbar :focus-visible{outline-color:#fff}.heading h1 span,.heading .eyebrow,.insights-heading .eyebrow,.register-heading .eyebrow{color:#111}.forma-review-link:hover{background:#eee;border-color:#777}
+
+/* Forma link leads each workflow name like a clickable bullet. */
+.review-name{gap:7px}.review-name>button{padding-top:3px}.forma-review-link{flex:0 0 24px;width:24px;height:24px;border:0;background:transparent}.forma-review-link:hover{background:#eee}
