@@ -63,3 +63,5 @@ Tests cover authentication, forged headers, storage conflicts, pagination, batch
 - ARX logo: vector from https://www.arx.ing/en, retrieved 11 November 2026. The logo belongs to its owner.
 
 - Autodesk Forma icon: original application favicon from https://acc.autodesk.com/assets/exo/1167/favicon.ico, retrieved 11 November 2026. The icon belongs to Autodesk.
+
+Model totals count one case-insensitive filename stem across RVT, IFC, NWC, NWD and DWFX, including matching native CAD companions. Civil 3D DWG is recognized by an explicit C3D code, declared model type or matching model-format filename. Other CAD drawing pairs retain their drawing classification. Distinct revision suffixes remain distinct models.

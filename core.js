@@ -68,13 +68,14 @@ function pdfClassification(file,packageFiles=[]){
 }
 function documentClassification(file,packageFiles=[]){
  const name=clean(file.name);
- if(/\.(nwc|nwd|ifc|rvt)$/i.test(name))return {type:'model',reason:'Model format'};
+ if(/\.(nwc|nwd|ifc|rvt|dwfx)$/i.test(name)||(/\.dwg$/i.test(name)&&(/(?:^|[-_ ])C3D(?:[-_ .]|$)/i.test(name)||/civil.?3d|c3d|model/i.test(clean(file.documentType))||packageFiles.some(f=>/\.(rvt|ifc|nwc|nwd|dwfx)$/i.test(clean(f.name))&&modelStem(f.name)===modelStem(name)))))return {type:'model',reason:'Model format'};
  if(/\.(dwg|dxf|dgn)$/i.test(name))return {type:'drawing',reason:'CAD drawing'};
  const result=pdfClassification(file,packageFiles);
  return result.type==='nonPdf'?{type:'other',reason:'Other document format'}:result;
 }
 const documentType=(file,packageFiles=[])=>documentClassification(file,packageFiles).type;
-const modelCount=r=>(r.files||[]).filter(f=>documentType(f,r.files)==='model').length;
+const modelStem=name=>clean(name).replace(/\.[^.]+$/,'').toUpperCase();
+const modelCount=r=>new Set((r.files||[]).filter(f=>documentType(f,r.files)==='model').map(f=>modelStem(f.name))).size;
 const documentCount=(r,type)=>type==='model'?modelCount(r):pdfCounts(r)[type]||0;
 const pdfType=(file,packageFiles=[])=>pdfClassification(file,packageFiles).type;
 function pdfCounts(r){const counts={drawing:0,report:0,other:0,unclassified:0,total:0};for(const f of r.files||[]){const type=pdfType(f,r.files);if(type!=='nonPdf'){counts[type]++;counts.total++;}}return counts;}

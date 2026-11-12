@@ -29,10 +29,14 @@ const pairAndModels={status:'OPEN',created:0,files:[{name:'plan.pdf'},{name:'PLA
 assert.equal(C.documentType(pairAndModels.files[0],pairAndModels.files),'drawing');
 assert.equal(C.documentType(pairAndModels.files[1],pairAndModels.files),'drawing');
 for(const f of pairAndModels.files.slice(2))assert.equal(C.documentType(f,pairAndModels.files),'model');
-assert.equal(C.modelCount(pairAndModels),4);assert.equal(C.drawingCount(pairAndModels),1);
-assert.equal(C.drawingMetrics([pairAndModels],t).models,4);
+assert.equal(C.modelCount(pairAndModels),1);assert.equal(C.drawingCount(pairAndModels),1);
+assert.equal(C.drawingMetrics([pairAndModels],t).models,1);
 assert.equal(C.workloadMatches(pairAndModels,'document|model',t),true);
 assert.equal(C.workloadMatches(reportOnly,'document|model',t),false);
 assert.notEqual(C.documentType({name:'model.ifc.pdf'}),'model');
 assert.equal(C.drawingMetrics([{...pairAndModels,status:'VOID'}],t).models,0);
 console.log('PASS document labels: CAD/PDF drawing pair, NWC/NWD/IFC/RVT models, single sheet count, model filters and void exclusion.');
+
+assert.equal(C.modelCount({files:[...pairAndModels.files,{name:"Building.dwfx"},{name:"Building.dwg"}]}),1);
+assert.equal(C.modelCount({files:[{name:"A-R01.rvt"},{name:"a-r01.nwc"},{name:"A-R02.ifc"}]}),2);
+assert.equal(C.documentType({name:"Road-C3D-001.dwg"}),"model");
