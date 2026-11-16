@@ -65,3 +65,10 @@ Tests cover authentication, forged headers, storage conflicts, pagination, batch
 - Autodesk Forma icon: original application favicon from https://acc.autodesk.com/assets/exo/1167/favicon.ico, retrieved 11 November 2026. The icon belongs to Autodesk.
 
 Model totals count one case-insensitive filename stem across RVT, IFC, NWC, NWD and DWFX, including matching native CAD companions. Civil 3D DWG is recognized by an explicit C3D code, declared model type or matching model-format filename. Other CAD drawing pairs retain their drawing classification. Distinct revision suffixes remain distinct models.
+
+
+## 16 November 2026 — Working calendar and date-range reports
+
+The approved working week is Saturday through Thursday. Friday alone is excluded; no public holidays or office-hour calendar is assumed. Durations retain fractional days and use Saudi project time (UTC+03). Review age/cycle, overdue duration and the two-working-day warning use this calendar. Source deadlines are not shifted. Model age warnings use seven working days.
+
+Date filters have inclusive From/To dates and a selectable date field. Missing dates remain visible without a range and are excluded while a range is selected; reversed ranges are rejected. Exports retain the underlying dates, not just durations. Date-range reports filter the current records; they are not reconstructed historical status snapshots.

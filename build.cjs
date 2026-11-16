@@ -4,7 +4,7 @@ const apiOrigin=process.env.SB05_API_ORIGIN||config.apiOrigin;
 if(process.argv.includes('--pages')&&(!apiOrigin||!/^https:\/\//.test(apiOrigin)))throw Error('Configure the Cloudflare API origin in frontend-config.json before publishing.');
 let html=fs.readFileSync('template.html','utf8');
 for(const [token,file,mime] of [['ARX_LOGO','arx.svg','image/svg+xml']])html=html.replace('/*'+token+'*/','data:'+mime+';base64,'+fs.readFileSync('assets/'+file).toString('base64'));
-for(const [token,file] of [['STYLES','style.css'],['XLSX','vendor/xlsx.full.min.js'],['CORE','core.js'],['APP','app.js']])html=html.replace('/*'+token+'*/',()=>fs.readFileSync(file,'utf8').replace(/<\/script/gi,'<\\/script'));
+for(const [token,file] of [['STYLES','style.css'],['XLSX','vendor/xlsx.full.min.js'],['DATES','date-rules.js'],['REPORT_DATES','report-dates.js'],['CORE','core.js'],['APP','app.js']])html=html.replace('/*'+token+'*/',()=>fs.readFileSync(file,'utf8').replace(/<\/script/gi,'<\\/script'));
 const initial=fs.existsSync('source-data.json')?JSON.parse(fs.readFileSync('source-data.json','utf8')):{schema:1,name:'Awaiting first report',reportAt:Date.now(),reviews:[],voidCount:0,warnings:['No report is loaded.']};
 html=html.replace('/*FORMA_ICON*/','data:image/x-icon;base64,'+fs.readFileSync('assets/forma.ico').toString('base64'));
 fs.mkdirSync('dist/server',{recursive:true});fs.mkdirSync('dist/.openai',{recursive:true});

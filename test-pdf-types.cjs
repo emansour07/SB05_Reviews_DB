@@ -3,11 +3,11 @@ const sdw='R05H02-C063-BCR-01-B02-SDW-AR-AR-10002.pdf';
 for(const [name,type] of [[sdw,'drawing'],['Structural design report.pdf','report'],['Progress_Report_01.PDF','report'],['Fire drawings.pdf','unclassified'],['Method_statement.pdf','other'],['Specification.pdf','other'],['R05H02-C063-BCR-01-B02-REP-ST-ST-00001.pdf','unclassified'],['Attachment.pdf','unclassified'],[sdw.replace('.pdf','-report.pdf'),'drawing'],['model.rvt','nonPdf'],['report.pdf.tmp','nonPdf']])assert.equal(C.pdfType({name}),type,name);
 assert.equal(C.pdfType({name:sdw,documentType:'Report'}),'drawing','Confirmed filename rule wins');
 assert.equal(C.pdfType({name:'attachment.pdf',documentType:'SDW'}),'unclassified');
-const t=10*C.DAY,make=(n)=>Array.from({length:n},()=>({name:sdw}));
+const t=Date.parse('2026-11-18T09:00:00Z'),make=(n)=>Array.from({length:n},()=>({name:sdw}));
 const mixed={status:'OPEN',created:t-2*C.DAY,files:[...make(4),{name:'Design report.pdf'},{name:'Specification.pdf'},{name:'Attachment.pdf'},{name:'Model.rvt'}]};
 const reportOnly={status:'CLOSED',created:0,finished:C.DAY,files:[{name:'Report.pdf'}]};
 const metrics=C.drawingMetrics([mixed,reportOnly],t);
-assert.equal(C.pdfCount(mixed),7);assert.equal(C.drawingCount(mixed),4);assert.equal(metrics.total,4);assert.equal(metrics.packages,1);assert.equal(metrics.noDrawingPackages,1);assert.equal(metrics.sizes['1–4'],1);assert.equal(metrics.sizes['5–10'],0);assert.equal(metrics.age['>1–2 days'],4);assert.deepEqual(metrics.pdfTypes,{drawing:4,report:2,other:1,unclassified:1});
+assert.equal(C.pdfCount(mixed),7);assert.equal(C.drawingCount(mixed),4);assert.equal(metrics.total,4);assert.equal(metrics.packages,1);assert.equal(metrics.noDrawingPackages,1);assert.equal(metrics.sizes['1–4'],1);assert.equal(metrics.sizes['5–10'],0);assert.equal(metrics.age['>1–2 working days'],4);assert.deepEqual(metrics.pdfTypes,{drawing:4,report:2,other:1,unclassified:1});
 assert.equal(C.workloadMatches(reportOnly,'document|report',t),true);assert.equal(C.workloadMatches(reportOnly,'state|Reviewed',t),false);assert.equal(C.workloadMatches(mixed,'document|unclassified',t),true);assert.equal(C.workloadMatches(reportOnly,'size|No drawings',t),true);
 console.log('PASS document types: confirmed SDW, filename rules, reports, other/unknown PDFs, conflicting clues, report-only and mixed packages, drawing-only age/size totals and filters.');
 
